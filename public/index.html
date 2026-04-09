@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VSM Matcher</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: 
+    linear-gradient(135deg, rgba(15,23,42,0.6), rgba(30,41,59,0.6)),
+    url('multiVSM.jpg') center/cover no-repeat fixed;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.container {
+  width: 420px;
+  background: #111827;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.question {
+  display: none;
+  animation: slide 0.4s ease;
+}
+
+.question.active {
+  display: block;
+}
+
+@keyframes slide {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.option {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  background: #1f2937;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.option:hover {
+  background: #3b82f6;
+}
+
+.progress {
+  height: 6px;
+  background: #374151;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #3b82f6;
+  transition: width 0.3s;
+}
+
+img {
+  margin-top: 20px;
+  border-radius: 12px;
+  max-width: 100%;
+}
+</style>
+
+</head>
+
+<body>
+    
+
+<div class="container">
+
+<h1>WHAT IS YOURVSM</h1>
+
+<div class="progress">
+  <div class="progress-bar" id="progress"></div>
+</div>
+
+<!-- Q1: ENERGY -->
+<div class="question active" id="q1">
+  <h2>"Who is the fastest runner among the following"</h2>
+  <button class="option" onclick="answer('energy',1)">"Sonic the Hedgehog"</button>
+  <button class="option" onclick="answer('energy',2)">"IShowSpeed"</button>
+  <button class="option" onclick="answer('energy',3)">"PoliceVSM"</button>
+</div>
+
+<!-- Q2: CREATIVITY -->
+<div class="question" id="q2">
+  <h2>"If you were stuck in a cave with a bear, would you - "</h2>
+  <button class="option" onclick="answer('creativity',1)">"hide from the bear till it leaves and then make a run"</button>
+  <button class="option" onclick="answer('creativity',2)">"charge at the bear headfirst and slide under its legs to escape"</button>
+  <button class="option" onclick="answer('creativity',3)">"fight the bear one on one, emerge victorious, then overthrow the entire bear kingdom, becoming the king of all bears, after which you would go and destroy all enemy forces who oppose your rule and take over the entire animal kingdom"</button>
+</div>
+
+<!-- Q3: POWER -->
+<div class="question" id="q3">
+  <h2>"Max bench(don't lie)"</h2>
+  <button class="option" onclick="answer('power',1)">"under 50kg"</button>
+  <button class="option" onclick="answer('power',2)">"51 to 100kg"</button>
+  <button class="option" onclick="answer('power',3)">"over 100kg"</button>
+</div>
+
+<div id="result"></div>
+
+</div>
+
+<script>
+let step = 1;
+
+let user = {
+  energy: 0,
+  creativity: 0,
+  power: 0
+};
+
+let images = [];
+
+// load images
+async function loadImages() {
+  try {
+    const res = await fetch("/api/images"); // ← call your server, not GitHub
+    if (!res.ok) throw new Error(await res.text());
+    images = await res.json();
+    console.log(images);
+  } catch (err) {
+    console.error("loadImages failed:", err);
+    document.getElementById("result").innerHTML = "<p>Failed to load images.</p>";
+  }
+}
+// Handle answer
+function answer(feature, value) {
+  user[feature] = value;
+
+  document.getElementById("q" + step).classList.remove("active");
+
+  step++;
+
+  updateProgress();
+
+  if (step <= 3) {
+    document.getElementById("q" + step).classList.add("active");
+  } else {
+    match();
+  }
+}
+
+// Progress bar
+function updateProgress() {
+  document.getElementById("progress").style.width = (step - 1) * 33 + "%";
+}
+
+// Matching logic (equal weights)
+function match() {
+  let bestScore = Infinity;
+  let candidates = [];
+
+  for (let img of images) {
+    let f = img.features;
+
+    let score =
+      (user.energy - f.energy) ** 2 +
+      (user.creativity - f.creativity) ** 2 +
+      (user.power - f.power) ** 2;
+
+    if (score < bestScore) {
+      bestScore = score;
+      candidates = [img];        // new best, reset list
+    } else if (score === bestScore) {
+      candidates.push(img);      // tied, add to list
+    }
+  }
+
+  // Pick randomly from all tied candidates
+  const best = candidates[Math.floor(Math.random() * candidates.length)];
+
+  document.getElementById("result").innerHTML = `
+  <h2>${best.name}</h2>
+  <img src="${best.src}">
+`;
+}
+
+loadImages();
+</script>
+
+</body>
+</html>
