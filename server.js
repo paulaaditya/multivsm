@@ -16,34 +16,31 @@ app.use(express.static(path.join(__dirname, "public")));
 // Path to feature data
 const DATA_FILE = path.join(__dirname, "data.json");
 
-// GitHub API (CASE-SENSITIVE PATH)
-const GITHUB_API = "https://api.github.com/repos/paulaaditya/multivsm/contents";
-
 /**
  * GET /api/images
  * Fetch images from GitHub + attach features
  */
-app.get("/api/images", async (req, res) => {
+app.get("/api/images", (req, res) => {
   try {
-    const response = await axios.get(GITHUB_API, {
-      headers: { "User-Agent": "node.js" }
-    });
+    const imagesPath = path.join(__dirname, "public/images");
+
+    const files = fs.readdirSync(imagesPath);
 
     const data = fs.existsSync(DATA_FILE)
       ? JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"))
       : {};
 
-    const images = response.data
-  .filter(file => /\.(jpg|jpeg|png)$/i.test(file.name))
-  .map(file => ({
-    name: file.name.replace(/\.[^/.]+$/, ""),  // ← add this, strips extension
-    src: file.download_url,
-    features: data[file.name] || { energy: 2, creativity: 2, power: 2 }
-  }));
+    const images = files
+      .filter(file => /\.(jpg|jpeg|png)$/i.test(file))
+      .map(file => ({
+        name: file.replace(/\.[^/.]+$/, ""),
+        src: `/images/${file}`,   // ← served from public folder
+        features: data[file] || { energy: 2, creativity: 2, power: 2 }
+      }));
 
     res.json(images);
   } catch (err) {
-    console.error("GitHub fetch error:", err.message);
+    console.error("Local fetch error:", err.message);
     res.status(500).json({ error: "Failed to fetch images", details: err.message });
   }
 });
